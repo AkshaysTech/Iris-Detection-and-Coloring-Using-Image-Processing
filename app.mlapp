@@ -1,0 +1,266 @@
+classdef app1 < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure                     matlab.ui.Figure
+        OutputColoredLabel           matlab.ui.control.Label
+        YourEyeLabel                 matlab.ui.control.Label
+        RangeSlider                  matlab.ui.control.Slider
+        RangeSliderLabel             matlab.ui.control.Label
+        ConvertButton                matlab.ui.control.Button
+        InputImageButton             matlab.ui.control.Button
+        CustomiseYourIrisColorLabel  matlab.ui.control.Label
+        UIAxes2                      matlab.ui.control.UIAxes
+        UIAxes                       matlab.ui.control.UIAxes
+    end
+
+
+    properties (Access = private)
+        IMG % Description
+        IMG2 % Description
+    end
+
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Button pushed function: InputImageButton
+        function Select(app, event)
+            global IMG;
+            [file,path] = uigetfile('*.*');
+            if isequal(file,0)
+                figure(app.UIFigure);
+                return;
+            end
+            figure(app.UIFigure);
+            app.IMG=imread(fullfile(path,file));
+            imshow(app.IMG,'Parent',app.UIAxes);
+
+        end
+
+        % Button down function: UIAxes2
+        function Convert(app, event)
+
+
+        end
+
+        % Value changed function: RangeSlider
+        function Range(app, event)
+            i=imread('A_blue_eye.jpg');
+            imshow(i); title('Original Image')
+            i_bw=im2bw(imread('A_blue_eye.jpg'));
+            imshow(i_bw); title('BW Image')
+            i_edge=edge(i_bw,"canny",[0.06 0.1]);
+            imshow(i_edge); title('Edge using Canny')
+            i_close=imclose(i_edge,strel('disk',1,8));
+            imshow(i_close); title('closing')
+            i_fill=imfill(i_close,'holes');
+            imshow(i_fill); title('Filling of closed image')
+            i_mask=bwareaopen(imopen(i_fill,strel(ones(10,10))),20000);
+            imshow(i_mask); title('BW Segmented Iris')
+            i_r=i(:,:,1).*uint8(i_mask);
+            i_g=i(:,:,2).*uint8(i_mask);
+
+            i_b=i(:,:,3).*uint8(i_mask);
+            i_seg=cat(3,i_r,i_g,i_b);
+            imshow(i_seg)
+            HSV = rgb2hsv(i_seg);
+
+            % Obtaining Hue channel/matrix of the HSV color space
+            H = HSV(:,:,1);
+            H( H > mean2(H) ) = app.RangeSlider.Value;
+
+        end
+
+        % Button pushed function: ConvertButton
+        function ConvertButtonPushed(app, event)
+            global IMG;global IMG2;global result1;
+            i=imread('A_blue_eye.jpg');
+            imshow(i); title('Original Image')
+            i_bw=im2bw(imread('A_blue_eye.jpg'));
+            imshow(i_bw); title('BW Image')
+            i_edge=edge(i_bw,"canny",[0.06 0.1]);
+            imshow(i_edge); title('Edge using Canny')
+            i_close=imclose(i_edge,strel('disk',1,8));
+            imshow(i_close); title('closing')
+            i_fill=imfill(i_close,'holes');
+            imshow(i_fill); title('Filling of closed image')
+            i_mask=bwareaopen(imopen(i_fill,strel(ones(10,10))),20000);
+            imshow(i_mask); title('BW Segmented Iris')
+            i_r=i(:,:,1).*uint8(i_mask);
+            i_g=i(:,:,2).*uint8(i_mask);
+
+            i_b=i(:,:,3).*uint8(i_mask);
+            i_seg=cat(3,i_r,i_g,i_b);
+            imshow(i_seg)
+            HSV = rgb2hsv(i_seg);
+
+            % Obtaining Hue channel/matrix of the HSV color space
+            H = HSV(:,:,1);
+
+            % Converting All hue values lower than the mean
+            % value of Hue channel to .7(blue)
+            H( H > mean2(H) ) =0.3;
+
+            % Replacing the original HSV channel by the current one
+            HSV(:,:,1) = H;
+
+            % Converting the HSV channel to RGB for displaying
+            C = hsv2rgb(HSV);
+            figure,imshow(C);title('Color Sliced to Blue');
+            imwrite(C,'colourspliced.jpeg');
+            % result = bsxfun(@plus,double(i),C);
+            % imshow(result)
+            % [r c]=size(C);
+            % figure();
+            % M = repmat(all(~C,3),[1 1 3]); %mask black parts
+            % C(M) = 1;
+            % imshow(C); title('White Background')
+            i_mask1=1-i_mask;
+            i_new=i.*uint8(i_mask1);
+            imshow(i_new);
+            %result1 = infuse(i_new,uint8(C));
+            %result1 = bsxfun(@plus,i_new,uint8(C));
+            result1=im2double(i_new)+C;
+            imshow(result1); title('Output')
+            global IMG2 ;global result1;
+            app.IMG2=result1;
+            imshow(app.IMG2,'Parent',app.UIAxes2);
+        end
+
+        % Value changing function: RangeSlider
+        function Change(app, event)
+            changingValue = event.Value;
+        
+
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.Color = [0.149 0.149 0.149];
+            app.UIFigure.Position = [100 100 640 480];
+            app.UIFigure.Name = 'MATLAB App';
+
+            % Create UIAxes
+            app.UIAxes = uiaxes(app.UIFigure);
+            xlabel(app.UIAxes, 'X')
+            ylabel(app.UIAxes, 'Y')
+            zlabel(app.UIAxes, 'Z')
+            app.UIAxes.AmbientLightColor = [0 0 0];
+            app.UIAxes.FontName = 'Times';
+            app.UIAxes.Visible = 'off';
+            app.UIAxes.Position = [13 149 300 185];
+
+            % Create UIAxes2
+            app.UIAxes2 = uiaxes(app.UIFigure);
+            xlabel(app.UIAxes2, 'X')
+            ylabel(app.UIAxes2, 'Y')
+            zlabel(app.UIAxes2, 'Z')
+            app.UIAxes2.FontName = 'Times';
+            app.UIAxes2.BoxStyle = 'full';
+            app.UIAxes2.Box = 'on';
+            app.UIAxes2.ButtonDownFcn = createCallbackFcn(app, @Convert, true);
+            colormap(app.UIAxes2, 'hsv')
+            app.UIAxes2.Visible = 'off';
+            app.UIAxes2.Position = [312 149 300 185];
+
+            % Create CustomiseYourIrisColorLabel
+            app.CustomiseYourIrisColorLabel = uilabel(app.UIFigure);
+            app.CustomiseYourIrisColorLabel.BackgroundColor = [0.149 0.149 0.149];
+            app.CustomiseYourIrisColorLabel.FontName = 'Times';
+            app.CustomiseYourIrisColorLabel.FontSize = 16;
+            app.CustomiseYourIrisColorLabel.FontWeight = 'bold';
+            app.CustomiseYourIrisColorLabel.FontColor = [1 1 1];
+            app.CustomiseYourIrisColorLabel.Position = [241 414 185 36];
+            app.CustomiseYourIrisColorLabel.Text = 'Customise Your Iris Color';
+
+            % Create InputImageButton
+            app.InputImageButton = uibutton(app.UIFigure, 'push');
+            app.InputImageButton.ButtonPushedFcn = createCallbackFcn(app, @Select, true);
+            app.InputImageButton.BackgroundColor = [0.149 0.149 0.149];
+            app.InputImageButton.FontName = 'Times';
+            app.InputImageButton.FontColor = [1 1 1];
+            app.InputImageButton.Position = [129 97 100 23];
+            app.InputImageButton.Text = 'Input Image';
+
+            % Create ConvertButton
+            app.ConvertButton = uibutton(app.UIFigure, 'push');
+            app.ConvertButton.ButtonPushedFcn = createCallbackFcn(app, @ConvertButtonPushed, true);
+            app.ConvertButton.BackgroundColor = [0.149 0.149 0.149];
+            app.ConvertButton.FontName = 'Times';
+            app.ConvertButton.FontColor = [1 1 1];
+            app.ConvertButton.Position = [425 97 100 23];
+            app.ConvertButton.Text = 'Convert';
+
+            % Create RangeSliderLabel
+            app.RangeSliderLabel = uilabel(app.UIFigure);
+            app.RangeSliderLabel.HorizontalAlignment = 'right';
+            app.RangeSliderLabel.FontName = 'Times';
+            app.RangeSliderLabel.FontColor = [1 1 1];
+            app.RangeSliderLabel.Position = [212 50 36 22];
+            app.RangeSliderLabel.Text = 'Range';
+
+            % Create RangeSlider
+            app.RangeSlider = uislider(app.UIFigure);
+            app.RangeSlider.Limits = [0 1];
+            app.RangeSlider.ValueChangedFcn = createCallbackFcn(app, @Range, true);
+            app.RangeSlider.ValueChangingFcn = createCallbackFcn(app, @Change, true);
+            app.RangeSlider.FontName = 'Times';
+            app.RangeSlider.FontColor = [1 1 1];
+            app.RangeSlider.Position = [269 59 150 3];
+
+            % Create YourEyeLabel
+            app.YourEyeLabel = uilabel(app.UIFigure);
+            app.YourEyeLabel.FontName = 'Times';
+            app.YourEyeLabel.FontSize = 18;
+            app.YourEyeLabel.FontWeight = 'bold';
+            app.YourEyeLabel.FontColor = [1 1 1];
+            app.YourEyeLabel.Position = [141 319 76 24];
+            app.YourEyeLabel.Text = 'Your Eye';
+
+            % Create OutputColoredLabel
+            app.OutputColoredLabel = uilabel(app.UIFigure);
+            app.OutputColoredLabel.FontName = 'Times';
+            app.OutputColoredLabel.FontSize = 18;
+            app.OutputColoredLabel.FontWeight = 'bold';
+            app.OutputColoredLabel.FontColor = [1 1 1];
+            app.OutputColoredLabel.Position = [418 319 135 24];
+            app.OutputColoredLabel.Text = 'Output(Colored)';
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = app1
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.UIFigure)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+end
